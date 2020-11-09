@@ -26,9 +26,7 @@ The following nodes are implemented which expose a part of the Local API:
 - slide-conf
 	- Contains the `hostaneme` and the `device code` of a single slide.
 - slide-get-info
-	- Read Slide Device ID (MAC)
-	- Request current Position
-	- Request whether Touch&Go is on or off (currently not yet adjustable)
+	- Returns information about a Slide (e.g. the Device ID (MAC), the current position, whether Touch&Go is on or off, the name, the group name etc.)
 
 ## Using the (local) API
 
@@ -41,12 +39,11 @@ You need to add one configuration node per Slide motor you have installed. A fil
 ![Sample config](https://github.com/gvdhoven/node-red-contrib-slide/blob/main/assets/readme/img/slide.conf.png?raw=true)
 
 As you can see, it contains a 'calibrate' button. Once you have entered the hostname and the devicecode, you can optionally click this button. This starts a custom calibration procedure:
-	* Closes the curtain
-	* Polls for a maximum of 30 seconds until the curtain stops moving
+	* Starts the calibration procedure and waits until the curtain stops moving
 	* Saves the 'closed' offset (this should be near the 1.0 range)
 	* Opens the curtain
-	* Polls for a maximum of 30 seconds until the curtain stops moving
 	* Saves the 'open' offset (this should be near the 0.0 range)
+	* Restores the curtain to the approximate position it was while calibration was initiated.
 
 This offset is then used on subsequent calls on the `slide.setposition` node, to more precisely determine the curtain position and to see if an actual call to the motor is even needed.
 
