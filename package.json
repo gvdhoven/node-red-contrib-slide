@@ -1,0 +1,36 @@
+{
+		"name": "node-red-contrib-slide",
+		"version": "0.0.0",
+		"description": "Control the Slide curtains from Innovation In Motion via node-red using the local API.",
+		"main": "index.js",
+		"scripts": {
+				"test": "echo \"No test specified\""
+		},
+		"keywords": [
+				"node-red",
+				"GoSlide",
+				"Innovation In Motion",
+				"API",
+				"Slide",
+				"Slide.store"
+		],
+		"node-red": {
+				"nodes": {
+						"slide": "slide.js"
+				}
+		},
+		"repository": {
+				"type": "git",
+				"url": "git+https://github.com/gvdhoven/node-red-contrib-slide.git"
+		},
+		"bugs": {
+				"url": "https://github.com/gvdhoven/node-red-contrib-slide/issues"
+		},
+		"homepage": "https://github.com/gvdhoven/node-red-contrib-slide#readme",
+		"author": "Gilles van den Hoven <gilles@webunity.nl>",
+		"license": "Apache-2.0",
+		"dependencies": {
+				"node-fetch": "^2.6.1",
+				"digest-fetch": "^1.1.5"
+		}
+}

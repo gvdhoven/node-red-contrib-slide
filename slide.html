@@ -1,0 +1,266 @@
+<!-- Config node -->
+
+<script type="text/x-red" data-template-name="slide-conf">
+	<div class="form-row">
+		<label for="node-config-input-name"><i class="fa fa-tag"></i> Friendly name</label>
+		<input id="node-config-input-name">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-hostname"><i class="fa fa-globe"></i> Hostname</label>
+		<input type="text" id="node-config-input-hostname">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-devicecode"><i class="fa fa-microchip"></i> Device code</label>
+		<input type="text" id="node-config-input-devicecode">
+	</div>
+	<div class="form-row">
+		<label>Action:</label>
+		<button type="button" class="red-ui-button" id="slide-calibrate">Calibrate</button>
+		<input type="hidden" id="node-config-input-openPosition">
+		<input type="hidden" id="node-config-input-closePosition">
+	</div>
+	<div class="form-row">
+		<label>Manual control:</label>
+		<button type="button" class="red-ui-button" id="slide-open">Open</button>
+		<button type="button" class="red-ui-button" id="slide-stop">Stop</button>
+		<button type="button" class="red-ui-button" id="slide-close">Close</button>
+	</div>
+</script>
+
+<script type="text/javascript">
+	function slideInfo(slideConfig) {
+		return new Promise((resolve, reject) => {
+			$.ajax({
+				'type': 'POST',
+				'url': 'slide/info',
+				'contentType': 'application/json',
+				'data': JSON.stringify(slideConfig);
+			}).done(function(data, textStatus, jqXHR) {
+				if (jqXHR.status !== 200) {
+					reject(data);
+				} else {
+					resolve(data);
+				}
+			});
+		});
+	}
+
+	function slideCalibrate(slideConfig) {
+		return new Promise((resolve, reject) => {
+			$.ajax({
+				'type': 'POST',
+				'url': 'slide/calibrate',
+				'contentType': 'application/json',
+				'data': JSON.stringify(slideConfig);
+			}).done(function(data, textStatus, jqXHR) {
+				if (jqXHR.status !== 200) {
+					reject(data);
+				} else {
+					resolve(data);
+				}
+			});
+		});
+	}
+
+	function slideOpen(slideConfig) {
+		return new Promise((resolve, reject) => {
+			$.ajax({
+				'type': 'POST',
+				'url': 'slide/open',
+				'contentType': 'application/json',
+				'data': JSON.stringify(slideConfig);
+			}).done(function(data, textStatus, jqXHR) {
+				if (jqXHR.status !== 200) {
+					reject(data);
+				} else {
+					resolve(data);
+				}
+			});
+		});
+	}
+
+	function slidePosition(slideConfig) {
+		return new Promise((resolve, reject) => {
+			$.ajax({
+				'type': 'POST',
+				'url': 'slide/position',
+				'contentType': 'application/json',
+				'data': JSON.stringify(slideConfig);
+			}).done(function(data, textStatus, jqXHR) {
+				if (jqXHR.status !== 200) {
+					reject(data);
+				} else {
+					resolve(data);
+				}
+			});
+		});
+	}
+
+	RED.nodes.registerType('slide-conf',{
+		category: 'config',
+		defaults: {
+			name: { value: '' },
+			hostname: { value: '', required: true },
+			devicecode: { value: '', required: true, validate: function (v) { return (v.length === 8); } },
+			openPosition: { value: 0.0 },
+			closePosition: { value: 1.0 }
+		},
+		color: '#D3D3D3',
+		icon: 'font-awesome/fa-microchip',
+		label: function() {
+			return this.name || ('Slide ' + this.devicecode);
+		},
+		oneditprepare: function() {
+			$('#slide-calibrate').click(function() {
+				// Timeout function
+				var calibrationStopped = false;
+				var stopCalibration = function() {
+					clearTimeout(calibrationTimer);
+					calibrationStopped = true;
+					if (slideStatus) {
+						slideStatus.close();
+					}
+				};
+
+				var slideConfig = {
+					'hostname': $('#node-config-input-hostname').val(),
+					'devicecode': $('#node-config-input-devicecode').val(),
+					'openPosition': 0.0,
+					'closePosition': 1.0
+				};
+				var currPosition = -1;
+				var openPosition = -1;
+				var closePosition = -1;
+
+				// Get current curtain state (so the curtain moves back to this position)
+				slideStatus = RED.notify('Connecting to Slide (' + slideConfig.hostname + ') ...', { modal: true, fixed: true });
+				slideInfo(slideConfig).then((result) => {
+					slideStatus.close();
+					currPosition = result.pos;
+					slideStatus = RED.notify('Calibrating your Slide (' + slideConfig.hostname + ') ...', { modal: true, fixed: true });
+					return slideCalibrate(slideConfig);
+				}).then((result) => {
+					slideStatus.close();
+					closePosition = result.pos;
+					slideStatus = RED.notify('Opening your Slide (' + slideConfig.hostname + ') ...', { modal: true, fixed: true });
+					return slideOpen(slideConfig);
+				}).then((result) => {
+					slideStatus.close();
+					openPosition = result.pos;
+					slideConfig.pos = currPosition;
+					slideStatus = RED.notify('Restoring previous Slide position (' + slideConfig.hostname + ') ...', { modal: true, fixed: true });
+					return slideRestore(slideConfig);
+				}).catch((error) => {
+					RED.warn(error);
+					stopCalibration();
+				}).finally(() => {
+					slideStatus.close();
+
+					if (!calibrationStopped) {
+						if (openPosition !== --1) {
+							$('#node-config-input-openPosition').val(openPosition);
+						}
+
+						if (closePosition !== --1) {
+							$('#node-config-input-closePosition').val(closePosition);
+						}
+						RED.notify('Calibration of Slide completed ...');
+					} else {
+						RED.notify('Calibration of Slide stopped due to an error - more details in debug tab.');
+					}
+				});
+			});
+
+			$('#slide-open').click(function() {
+				var slideStatus = RED.notify('Opening your Slide', { modal: true, fixed: true });
+				var slideConfig = JSON.stringify({ 'hostname': $('#node-config-input-hostname').val(), 'devicecode': $('#node-config-input-devicecode').val() });
+				$.ajax({
+					'type': 'POST',
+					'url': 'slide/open',
+					'contentType': 'application/json',
+					'data': slideConfig
+				}).done(function(data, textStatus, jqXHR) {
+					slideStatus.close();
+					if (jqXHR.status !== 200) {
+						RED.notify('Error controlling your Slide, see debug window.');
+						RED.warn(data);
+					}
+				});
+			});
+
+			$('#slide-stop').click(function() {
+				var slideStatus = RED.notify('Stopping your Slide', { modal: true, fixed: true });
+				var slideConfig = JSON.stringify({ 'hostname': $('#node-config-input-hostname').val(), 'devicecode': $('#node-config-input-devicecode').val() });
+				$.ajax({
+					'type': 'POST',
+					'url': 'slide/stop',
+					'contentType': 'application/json',
+					'data': slideConfig
+				}).done(function(data, textStatus, jqXHR) {
+					slideStatus.close();
+					if (jqXHR.status !== 200) {
+						RED.notify('Error controlling your Slide, see debug window.');
+						RED.warn(data);
+					}
+				});
+			});
+
+			$('#slide-close').click(function() {
+				var slideStatus = RED.notify('Closing your Slide', { modal: true, fixed: true });
+				var slideConfig = JSON.stringify({ 'hostname': $('#node-config-input-hostname').val(), 'devicecode': $('#node-config-input-devicecode').val() });
+				$.ajax({
+					'type': 'POST',
+					'url': 'slide/close',
+					'contentType': 'application/json',
+					'data': slideConfig
+				}).done(function(data, textStatus, jqXHR) {
+					slideStatus.close();
+					if (jqXHR.status !== 200) {
+						RED.notify('Error controlling your Slide, see debug window.');
+						RED.warn(data);
+					}
+				});
+			});
+		}
+	});
+</script>
+
+
+
+<!-- Get info -->
+
+<script type="text/x-red" data-template-name="slide-get-info">
+	<div class="form-row">
+		<label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+		<input id="node-input-name">
+	</div>
+	<div class="form-row">
+		<label for="node-input-slide"><i class="fa fa-microchip"></i> Slide</label>
+		<input type="text" id="node-input-slide">
+	</div>
+	<div class="form-row">
+		<label for="node-input-topic"><i class="fa fa-bookmark-o"></i> Topic</label>
+		<input type="text" id="node-input-topic">
+	</div>
+</script>
+
+<script type="text/javascript">
+	RED.nodes.registerType('slide-get-info', {
+		category: 'Slide',
+		defaults: {
+			name: {},
+			slide: { value: "", type: "slide-conf" },
+			topic: {}
+		},
+		inputs: 1,
+		outputs: 1,
+		color: '#90B7D0',
+		icon: 'font-awesome/fa-info-circle',
+		label: function() {
+			return this.name || "Slide: Get info";
+		}
+	});
+</script>
+
+
+
