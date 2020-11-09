@@ -121,7 +121,7 @@ module.exports = function(RED) {
 
 	RED.httpAdmin.post('/slide/stop', function(req, res) {
 		var localApi = new LocalApi(req.body.hostname, req.body.devicecode);
-		localApi.stop().then(result => {
+		localApi.stop().then(() => {
 			res.status(200).send();
 		}).catch(e => {
 			res.status(e.code).send(e);
