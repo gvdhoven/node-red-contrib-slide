@@ -29,6 +29,21 @@
 
 <script type="text/javascript">
 	/**
+	 * Assembles the configuration object used in AJAX calls.
+	 *
+	 * @returns {Object} JSON object representing the currently entered configuration.
+	 */
+	function getSlideConfig() {
+		var slideConfig = {
+			'hostname': $('#node-config-input-hostname').val(),
+			'devicecode': $('#node-config-input-devicecode').val(),
+			'openPosition': $('node-config-input-openPosition').val(),
+			'closePosition': $('node-config-input-closePosition').val()
+		};
+		return slideConfig;
+	}
+
+	/**
 	 * Makes an AJAX request to the node-red admin endpoint `/slide/info` created in `slide.js` in order to get information about a configured Slide.
 	 *
 	 * @param {object} slideConfig Object containing (at least) the currently configured hostname and currently configured device-code
@@ -38,7 +53,7 @@
 		return new Promise((resolve, reject) => {
 			$.ajax({
 				'type': 'POST',
-				'url': 'slide/info',
+				'url': '/slide/info',
 				'contentType': 'application/json',
 				'data': JSON.stringify(slideConfig)
 			}).done(function(data, textStatus, jqXHR) {
@@ -61,7 +76,7 @@
 		return new Promise((resolve, reject) => {
 			$.ajax({
 				'type': 'POST',
-				'url': 'slide/calibrate',
+				'url': '/slide/calibrate',
 				'contentType': 'application/json',
 				'data': JSON.stringify(slideConfig)
 			}).done(function(data, textStatus, jqXHR) {
@@ -84,7 +99,7 @@
 		return new Promise((resolve, reject) => {
 			$.ajax({
 				'type': 'POST',
-				'url': 'slide/open',
+				'url': '/slide/open',
 				'contentType': 'application/json',
 				'data': JSON.stringify(slideConfig)
 			}).done(function(data, textStatus, jqXHR) {
@@ -107,7 +122,7 @@
 		return new Promise((resolve, reject) => {
 			$.ajax({
 				'type': 'POST',
-				'url': 'slide/position',
+				'url': '/slide/position',
 				'contentType': 'application/json',
 				'data': JSON.stringify(slideConfig)
 			}).done(function(data, textStatus, jqXHR) {
@@ -150,15 +165,10 @@
 					}
 				};
 
-				var slideConfig = {
-					'hostname': $('#node-config-input-hostname').val(),
-					'devicecode': $('#node-config-input-devicecode').val(),
-					'openPosition': 0.0,
-					'closePosition': 1.0
-				};
 				var currPosition = -1;
 				var openPosition = -1;
 				var closePosition = -1;
+				var slideConfig = getSlideConfig();
 
 				// Get current curtain state (so the curtain moves back to this position)
 				statusMessage = RED.notify('Connecting to Slide (' + slideConfig.hostname + ') ...', { modal: true, fixed: true });
@@ -191,25 +201,24 @@
 						if (closePosition !== -1) {
 							$('#node-config-input-closePosition').val(closePosition);
 						}
-						RED.notify('Calibration of Slide completed ...');
+						RED.notify('Calibration of your Slide was completed ...');
 					} else {
-						RED.notify('Calibration of Slide failed due to an error - more details in debug tab.');
+						RED.notify('Calibration of your Slide failed due to an error - more details in debug tab.');
 					}
 				});
 			});
 
 			$('#slide-open').click(function() {
 				var statusMessage = RED.notify('Opening your Slide', { modal: true, fixed: true });
-				var slideConfig = JSON.stringify({ 'hostname': $('#node-config-input-hostname').val(), 'devicecode': $('#node-config-input-devicecode').val() });
 				$.ajax({
 					'type': 'POST',
-					'url': 'slide/open',
+					'url': '/slide/open',
 					'contentType': 'application/json',
-					'data': slideConfig
+					'data': JSON.stringify(getSlideConfig())
 				}).done(function(data, textStatus, jqXHR) {
 					statusMessage.close();
 					if (jqXHR.status !== 200) {
-						RED.notify('Communication with Slide resulted in an an error - more details in debug tab.');
+						RED.notify('Communication with your Slide resulted in an an error - more details in debug tab.');
 						RED.warn(data);
 					}
 				});
@@ -217,16 +226,15 @@
 
 			$('#slide-stop').click(function() {
 				var statusMessage = RED.notify('Stopping your Slide', { modal: true, fixed: true });
-				var slideConfig = JSON.stringify({ 'hostname': $('#node-config-input-hostname').val(), 'devicecode': $('#node-config-input-devicecode').val() });
 				$.ajax({
 					'type': 'POST',
-					'url': 'slide/stop',
+					'url': '/slide/stop',
 					'contentType': 'application/json',
-					'data': slideConfig
+					'data': JSON.stringify(getSlideConfig())
 				}).done(function(data, textStatus, jqXHR) {
 					statusMessage.close();
 					if (jqXHR.status !== 200) {
-						RED.notify('Communication with Slide resulted in an an error - more details in debug tab.');
+						RED.notify('Communication with your Slide resulted in an an error - more details in debug tab.');
 						RED.warn(data);
 					}
 				});
@@ -234,16 +242,15 @@
 
 			$('#slide-close').click(function() {
 				var statusMessage = RED.notify('Closing your Slide', { modal: true, fixed: true });
-				var slideConfig = JSON.stringify({ 'hostname': $('#node-config-input-hostname').val(), 'devicecode': $('#node-config-input-devicecode').val() });
 				$.ajax({
 					'type': 'POST',
-					'url': 'slide/close',
+					'url': '/slide/close',
 					'contentType': 'application/json',
-					'data': slideConfig
+					'data': JSON.stringify(getSlideConfig())
 				}).done(function(data, textStatus, jqXHR) {
 					statusMessage.close();
 					if (jqXHR.status !== 200) {
-						RED.notify('Communication with Slide resulted in an an error - more details in debug tab.');
+						RED.notify('Communication with your Slide resulted in an an error - more details in debug tab.');
 						RED.warn(data);
 					}
 				});
