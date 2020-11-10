@@ -57,6 +57,8 @@ Use this node in order to get information about the state of a certain Slide. Th
 ### slide-set-absolute-position
 
 This node is able to set an absolute position on the slide, from 0 to 100%. This will most probably not mean that your curtain is half-way closed if you pass in the following payload `{ "payload": { "percent": 50 } }`, due to the fact that the Slide at `open` position can actually be at e.g. 4% and that same curtain can report a closed state of 98%. Halfway in this case would then be 51%. This math is done for you if you take the next Node; `slide-set-calibrated-position`.
+	
+![Inject node sample](https://github.com/gvdhoven/node-red-contrib-slide/blob/main/assets/readme/img/inject-node.png?raw=true)
 
 ### slide-set-calibrated-position
 
