@@ -48,6 +48,10 @@ For example;
 	- If the open offset is actually 0.09 and the curtain is already at 0.09; no `setPosition` command will be issued if you want to open the curtain; meaning you won't hear the motor wirring.
 	- If the close offset is actually 0.87 and the curtain is already at 0.87; no `setPosition` command will be issued if you want to close the curtain; meaning you won't hear the motor wirring.
 
+A full run of the calibration procedure can be seen on my Twitter timeline:
+
+[![Calibration procedure](https://github.com/gvdhoven/node-red-contrib-slide/blob/main/assets/readme/img/calibration-procedure.png?raw=true)](https://twitter.com/GillesvdHoven/status/1326129124583333888)
+
 ### slide-get-info
 
 Use this node in order to get information about the state of a certain Slide. This functionality is used heavily under the hood in order to determine calibration positions and to see when a certain Slide has stopped moving.
