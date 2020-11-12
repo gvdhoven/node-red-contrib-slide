@@ -218,16 +218,16 @@
 						statusMessage.close();
 						statusMessage = RED.notify('Calibrating your Slide (' + slideConfig.hostname + ')<br />Closing + waiting until motor stopped ...', { modal: true, fixed: true });
 					}, 2000);
-					currPosition = result.pos;
+					currPosition = result.currentPosition;
 					return slideCalibrate(slideConfig);
 				}).then((result) => {
 					statusMessage.close();
-					closePosition = result.pos;
+					closePosition = result.currentPosition;
 					statusMessage = RED.notify('Calibrating your Slide (' + slideConfig.hostname + ')<br />Opening + waiting until motor stopped ...', { modal: true, fixed: true });
 					return slideOpen(slideConfig);
 				}).then((result) => {
 					statusMessage.close();
-					openPosition = result.pos;
+					openPosition = result.currentPosition;
 				}).catch((error) => {
 					statusMessage.close();
 					calibrationStopped = true;

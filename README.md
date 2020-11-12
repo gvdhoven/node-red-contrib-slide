@@ -1,10 +1,12 @@
-
-
-
 # node-red-contrib-slide
 
 API control for the Slide curtains from Innovation In Motion. Only the **LOCAL API** is implemented, the assumption is that you are already running Node-red locally, hence you would want to control your curtains directly without a cloud.
-_In case remote API functionality is needed, feel free to submit a pull request for similar remote API functionality._
+
+_The Slide Local API is, in it's current form, intended as a first version, and expected to undergo significant expansions in later updates. The focus of the current API is to allow you to directly control the curtains._
+
+**By default, the local HTTP API is disabled since it is not yet officially published by Innovation In Motion. I am a beta tester and have therefore access, but I will not expose how to enable to local API until it is officially published by the Slide team at Innovation In Motion.**
+
+> In case remote API functionality is needed, feel free to submit a pull request for similar remote API functionality.
 
 [![NPM](https://nodei.co/npm/node-red-contrib-slide.png)](https://nodei.co/npm/node-red-contrib-slide/)
 
@@ -17,10 +19,6 @@ $ npm install node-red-contrib-slide
 ```
 
 ## Getting started
-
-_The Slide Local API is, in it's current form, intended as a first version, and expected to undergo significant expansions in later updates. The focus of the current API is to allow you to directly control the curtains._
-
-**By default, the local HTTP API is disabled since it is not yet officially published by Innovation In Motion. I am a beta tester and have therefore access, but I will not expose how to enable to local API until it is officially published by the Slide team at Innovation In Motion.**
 
 ## Available nodes
 
@@ -68,9 +66,35 @@ This node is able to set an absolute position on the slide, from 0 to 100%. This
 	
 ![Inject node sample](https://github.com/gvdhoven/node-red-contrib-slide/blob/main/assets/readme/img/inject-node.png?raw=true)
 
+A sample response is shown here:
+
+```
+	{
+	   "response":"success",
+	   "requestedPosition":1,
+	   "currentPosition":0.98,
+	   "openPosition":0,
+	   "closedPosition":1,
+	   "suggestToCalibrate":true
+	}
+```
+
 ### slide-set-calibrated-position
 
 This node takes the calibration settings found by clicking the 'Calibrate' button in the config node and applies that to a percentage offset. In the example shown at the `slide-set-absolute-position` node, the same payload `{ "payload": { "percent": 50 } }` would result in the Slide moving to 51%.
+
+A sample response is shown here:
+
+```
+	{
+	   "response":"success",
+	   "requestedPosition":1,
+	   "currentPosition":0.98,
+	   "openPosition":0,
+	   "closedPosition":1,
+	   "suggestToCalibrate":true
+	}
+```
 
 ### slide-open
 
