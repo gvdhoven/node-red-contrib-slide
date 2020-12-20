@@ -14,10 +14,16 @@
 		<input type="password" id="node-config-input-devicecode">
 	</div>
 	<div class="form-row">
+		<label for="node-config-input-openPosition"><i class="fa fa-microchip"></i> Open position</label>
+		<input type="password" id="node-config-input-openPosition">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-closePosition"><i class="fa fa-microchip"></i> Close position</label>
+		<input type="password" id="node-config-input-closePosition">
+	</div>
+	<div class="form-row">
 		<label>Action:</label>
 		<button type="button" class="red-ui-button" id="slide-calibrate">Calibrate</button>
-		<input type="hidden" id="node-config-input-openPosition">
-		<input type="hidden" id="node-config-input-closePosition">
 	</div>
 	<div class="form-row">
 		<label>Manual control:</label>
@@ -37,8 +43,8 @@
 		var slideConfig = {
 			'hostname': $.trim($('#node-config-input-hostname').val()),
 			'devicecode': $.trim($('#node-config-input-devicecode').val()),
-			'openPosition': $('node-config-input-openPosition').val(),
-			'closePosition': $('node-config-input-closePosition').val()
+			'openPosition': parseFloat($('node-config-input-openPosition').val()),
+			'closePosition': parseFloat($('node-config-input-closePosition').val())
 		};
 
 		if ((slideConfig.hostname === '') || (slideConfig.devicecode === '')) {
