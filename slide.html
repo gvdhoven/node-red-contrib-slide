@@ -15,11 +15,13 @@
 	</div>
 	<div class="form-row">
 		<label for="node-config-input-openPosition"><i class="fa fa-microchip"></i> Open position</label>
-		<input type="password" id="node-config-input-openPosition">
+		<input type="text" id="node-config-input-openPosition">
+		<input type="hidden" id="node-config-input-openPosition-type">
 	</div>
 	<div class="form-row">
 		<label for="node-config-input-closePosition"><i class="fa fa-microchip"></i> Close position</label>
-		<input type="password" id="node-config-input-closePosition">
+		<input type="text" id="node-config-input-closePosition">
+		<input type="hidden" id="node-config-input-closePosition-type">
 	</div>
 	<div class="form-row">
 		<label>Action:</label>
@@ -203,6 +205,18 @@
 			return 'Slide config';
 		},
 		oneditprepare: function() {
+			$("#node-config-input-openPosition").typedInput({
+				type:"num",
+				types:["num"],
+				typeField: "#node-config-input-openPosition-type"
+			})
+
+			$("#node-config-input-closePosition").typedInput({
+				type:"num",
+				types:["num"],
+				typeField: "#node-config-input-closePosition-type"
+			})
+
 			$('#slide-calibrate').click(() => {
 				var slideConfig = validateAndGetSlideConfig();
 				if (slideConfig === false) {
