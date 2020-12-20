@@ -42,7 +42,7 @@ module.exports = function(RED) {
 		this.closedPosition = n.closedPosition;
 
 		// Create object
-		this.localApi = new LocalApi(this.hostname, this.devicecode);
+		this.localApi = new LocalApi(this.hostname, this.devicecode, this.openPosition, this.closedPosition);
 	}
 	RED.nodes.registerType("slide-conf", localConf);
 
