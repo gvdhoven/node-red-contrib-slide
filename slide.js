@@ -1,5 +1,3 @@
-/*jslint node: true */
-/*jslint esversion: 6 */
 module.exports = function(RED) {
 	"use strict";
 
@@ -24,7 +22,39 @@ module.exports = function(RED) {
 			}, 3000);
 	}
 
+	/**
+	 * Helper function to parse a passed float value
+	 *
+	 * @param {any} value Float to parse
+	 * @param {float} fallback Float to return in case parsing failed.
+	 * @returns {Promise} Promise object representing the result of the API call.
+	 */
+	function checkFloat(value, fallback) {
+		return (/^(\-|\+)?([0-9]+(\.[0-9]+)?|Infinity)$/.test(value)) ? Number(value) : fallback;
+	}
 
+	/**
+	 * Helper function to get the right topic for the slide
+	 *
+	 * @param {object} node Node object
+	 * @param {object} msg Input message object
+	 * @returns {string} The topic which we should use
+	 */
+	function getTopic(node, msg) {
+		node.topic = (node.topic ? node.topic : '').trim();
+		msg.topic = (msg.topic ? msg.topic : '').trim();
+
+		let topic = 'slide';
+		if (node.topic !== '') {
+			topic = node.topic
+		} else {
+			if (msg.topic !== '') {
+				topic = msg.topic
+			}
+		}
+
+		return topic;
+	}
 
 	/**
 	 * Configuration node which holds only the device code.
@@ -39,10 +69,10 @@ module.exports = function(RED) {
 		this.hostname = n.hostname;
 		this.devicecode = n.devicecode;
 		this.openPosition = n.openPosition;
-		this.closedPosition = n.closedPosition;
+		this.closePosition = n.closePosition;
 
 		// Create object
-		this.localApi = new LocalApi(this.hostname, this.devicecode, this.openPosition, this.closedPosition);
+		this.localApi = new LocalApi(this.hostname, this.devicecode, this.openPosition, this.closePosition);
 	}
 	RED.nodes.registerType("slide-conf", localConf);
 
@@ -58,25 +88,23 @@ module.exports = function(RED) {
 		this.slide = RED.nodes.getNode(n.slide);
 		if (!this.slide) {
 			return null;
-		}
-
-		// Set hostname under slide
-		if (!this.slide.localApi.appearsValid()) {
+		} else if (!this.slide.localApi.appearsValid()) {
 			this.status({ 'fill': 'red', 'shape': 'ring', 'text': 'Invalid config' });
 		} else {
 			this.status({ 'fill': 'blue', 'shape': 'ring', 'text': this.slide.hostname });
 		}
+		this.topic = n.topic;
 
-		var node = this;
+		let node = this;
 		node.on('input', (msg, send, done) => {
+			blinkStatus(node, true, 'Sending command ...');
 			node.slide.localApi.getInfo().then(result => {
 				blinkStatus(node, true, 'Command OK');
-				send({ 'topic': ((node.topic !== '') ? node.topic : 'slide'), 'payload': result });
+				send({ 'topic': getTopic(node, msg), 'succeeded': true, 'payload': result });
 				done();
 			}).catch(e => {
-				blinkStatus(node, false, e.title);
-				node.warn(e.message);
-				send(null);
+				blinkStatus(node, false, 'Command failed!');
+				send({ 'topic': getTopic(node, msg), 'succeeded': false, 'payload': e });
 				done();
 			});
 		});
@@ -86,34 +114,29 @@ module.exports = function(RED) {
 
 
 	/**
-	 *Set absolute position node
+	 * Set position node
 	 *
 	 * @param {Node} node The node to create.
 	 */
-	function slideSetAbsolutePosition(n) {
+	function slideSetPosition(n) {
 		RED.nodes.createNode(this, n);
 		this.slide = RED.nodes.getNode(n.slide);
 		if (!this.slide) {
 			return null;
-		}
-
-		// Set hostname under slide
-		if (!this.slide.localApi.appearsValid()) {
+		} else if (!this.slide.localApi.appearsValid()) {
 			this.status({ 'fill': 'red', 'shape': 'ring', 'text': 'Invalid config' });
 		} else {
 			this.status({ 'fill': 'blue', 'shape': 'ring', 'text': this.slide.hostname });
 		}
+		this.topic = n.topic;
 
-		var node = this;
+		let node = this;
 		node.on('input', (msg, send, done) => {
-			var position = -1;
+			let position = -1;
 			if (msg && msg.payload && msg.payload.hasOwnProperty('percent')) {
-				position = parseInt(msg.payload.percent);
-				if ((position === NaN) || (position < 0) || (position > 100)) {
-					position = -1;
-				} else  {
-					// If still a valid percentage, convert it to a double
-					position = (position / 100);
+				let percent = Number(msg.payload.percent);
+				if (!isNaN(percent) && ((percent >= 0) && (percent <= 100))) {
+					position = (percent / 100);
 				}
 			}
 
@@ -123,81 +146,20 @@ module.exports = function(RED) {
 				send(null);
 				done();
 			} else {
+				blinkStatus(node, true, 'Sending command ...');
 				node.slide.localApi.setPos(position).then(result => {
 					blinkStatus(node, true, 'Command OK');
-					send({ 'topic': ((node.topic !== '') ? node.topic : 'slide'), 'payload': result });
+					send({ 'topic': getTopic(node, msg), 'succeeded': true, 'payload': result });
 					done();
 				}).catch(e => {
-					blinkStatus(node, false, e.title);
-					node.warn(e.message);
-					send(null);
+					blinkStatus(node, false, 'Command failed!');
+					send({ 'topic': getTopic(node, msg), 'succeeded': false, 'payload': e });
 					done();
 				});
 			}
 		});
 	}
-	RED.nodes.registerType("slide-set-absolute-position", slideSetAbsolutePosition);
-
-
-
-	/**
-	 * Set calibrated position node
-	 *
-	 * @param {Node} node The node to create.
-	 */
-	function slideSetCalibratedPosition(n) {
-		RED.nodes.createNode(this, n);
-		this.slide = RED.nodes.getNode(n.slide);
-		if (!this.slide) {
-			return null;
-		}
-
-		// Set hostname under slide
-		if (!this.slide.localApi.appearsValid()) {
-			this.status({ 'fill': 'red', 'shape': 'ring', 'text': 'Invalid config' });
-		} else {
-			this.status({ 'fill': 'blue', 'shape': 'ring', 'text': this.slide.hostname });
-		}
-
-		var node = this;
-		node.on('input', (msg, send, done) => {
-			var position = -1;
-			if (msg && msg.payload && msg.payload.hasOwnProperty('percent')) {
-				position = parseInt(msg.payload.percent);
-				if ((position === NaN) || (position < 0) || (position > 100)) {
-					position = -1;
-				} else  {
-					// If still a valid percentage, convert it to double, taking into account the a calibrated position
-					position = ((node.slide.localApi.closedPosition - node.slide.localApi.openPosition) * (position / 100)) + node.slide.localApi.openPosition;
-				}
-			}
-
-			if (position === -1) {
-				blinkStatus(node, false, 'Invalid input');
-				node.warn('Please pass a message with a payload which looks like this: { "payload": { "percent": 50 } }');
-				send(null);
-				done();
-			} else if ((node.slide.localApi.closedPosition - node.slide.localApi.openPosition) < 0 ||
-					   (node.slide.localApi.closedPosition <= node.slide.localApi.openPosition)) {
-				blinkStatus(node, false, 'Invalid calibration detected.');
-				node.warn('Please re-run the calibration procedure.');
-				send(null);
-				done();
-			} else {
-				node.slide.localApi.setPos(position).then(result => {
-					blinkStatus(node, true, 'Command OK');
-					send({ 'topic': ((node.topic !== '') ? node.topic : 'slide'), 'payload': result });
-					done();
-				}).catch(e => {
-					blinkStatus(node, false, e.title);
-					node.warn(e.message);
-					send(null);
-					done();
-				});
-			}
-		});
-	}
-	RED.nodes.registerType("slide-set-calibrated-position", slideSetCalibratedPosition);
+	RED.nodes.registerType("slide-set-position", slideSetPosition);
 
 
 
@@ -211,25 +173,23 @@ module.exports = function(RED) {
 		this.slide = RED.nodes.getNode(n.slide);
 		if (!this.slide) {
 			return null;
-		}
-
-		// Set hostname under slide
-		if (!this.slide.localApi.appearsValid()) {
+		} else if (!this.slide.localApi.appearsValid()) {
 			this.status({ 'fill': 'red', 'shape': 'ring', 'text': 'Invalid config' });
 		} else {
 			this.status({ 'fill': 'blue', 'shape': 'ring', 'text': this.slide.hostname });
 		}
+		this.topic = n.topic;
 
-		var node = this;
+		let node = this;
 		node.on('input', (msg, send, done) => {
+			blinkStatus(node, true, 'Sending command ...');
 			node.slide.localApi.open().then(result => {
 				blinkStatus(node, true, 'Command OK');
-				send({ 'topic': ((node.topic !== '') ? node.topic : 'slide'), 'payload': result });
+				send({ 'topic': getTopic(node, msg), 'succeeded': true, 'payload': result });
 				done();
 			}).catch(e => {
-				blinkStatus(node, false, e.title);
-				node.warn(e.message);
-				send(null);
+				blinkStatus(node, false, 'Command failed!');
+				send({ 'topic': getTopic(node, msg), 'succeeded': false, 'payload': e });
 				done();
 			});
 		});
@@ -248,25 +208,23 @@ module.exports = function(RED) {
 		this.slide = RED.nodes.getNode(n.slide);
 		if (!this.slide) {
 			return null;
-		}
-
-		// Set hostname under slide
-		if (!this.slide.localApi.appearsValid()) {
+		} else if (!this.slide.localApi.appearsValid()) {
 			this.status({ 'fill': 'red', 'shape': 'ring', 'text': 'Invalid config' });
 		} else {
 			this.status({ 'fill': 'blue', 'shape': 'ring', 'text': this.slide.hostname });
 		}
+		this.topic = n.topic;
 
-		var node = this;
+		let node = this;
 		node.on('input', (msg, send, done) => {
+			blinkStatus(node, true, 'Sending command ...');
 			node.slide.localApi.close().then(result => {
 				blinkStatus(node, true, 'Command OK');
-				send({ 'topic': ((node.topic !== '') ? node.topic : 'slide'), 'payload': result });
+				send({ 'topic': getTopic(node, msg), 'succeeded': true, 'payload': result });
 				done();
 			}).catch(e => {
-				blinkStatus(node, false, e.title);
-				node.warn(e.message);
-				send(null);
+				blinkStatus(node, false, 'Command failed!');
+				send({ 'topic': getTopic(node, msg), 'succeeded': false, 'payload': e });
 				done();
 			});
 		});
@@ -285,25 +243,23 @@ module.exports = function(RED) {
 		this.slide = RED.nodes.getNode(n.slide);
 		if (!this.slide) {
 			return null;
-		}
-
-		// Set hostname under slide
-		if (!this.slide.localApi.appearsValid()) {
+		} else if (!this.slide.localApi.appearsValid()) {
 			this.status({ 'fill': 'red', 'shape': 'ring', 'text': 'Invalid config' });
 		} else {
 			this.status({ 'fill': 'blue', 'shape': 'ring', 'text': this.slide.hostname });
 		}
+		this.topic = n.topic;
 
-		var node = this;
+		let node = this;
 		node.on('input', (msg, send, done) => {
+			blinkStatus(node, true, 'Sending command ...');
 			node.slide.localApi.stop().then(result => {
 				blinkStatus(node, true, 'Command OK');
-				send({ 'topic': ((node.topic !== '') ? node.topic : 'slide'), 'payload': result });
+				send({ 'topic': getTopic(node, msg), 'succeeded': true, 'payload': result });
 				done();
 			}).catch(e => {
-				blinkStatus(node, false, e.title);
-				node.warn(e.message);
-				send(null);
+				blinkStatus(node, false, 'Command failed!');
+				send({ 'topic': getTopic(node, msg), 'succeeded': false, 'payload': e });
 				done();
 			});
 		});
@@ -323,19 +279,17 @@ module.exports = function(RED) {
 		this.slide = RED.nodes.getNode(n.slide);
 		if (!this.slide) {
 			return null;
-		}
-
-		// Set hostname under slide
-		if (!this.slide.localApi.appearsValid()) {
+		} else if (!this.slide.localApi.appearsValid()) {
 			this.status({ 'fill': 'red', 'shape': 'ring', 'text': 'Invalid config' });
 		} else {
 			this.status({ 'fill': 'blue', 'shape': 'ring', 'text': this.slide.hostname });
 		}
+		this.topic = n.topic;
 
-		var node = this;
+		let node = this;
 		node.on('input', (msg, send, done) => {
-			var ssid = '';
-			var pass = '';
+			let ssid = '';
+			let pass = '';
 			if (msg && msg.payload && msg.payload.hasOwnProperty('ssid') && msg.payload.hasOwnProperty('pass')) {
 				ssid = msg.payload.ssid.trim();
 				pass = msg.payload.pass.trim();
@@ -347,14 +301,14 @@ module.exports = function(RED) {
 				send(null);
 				done();
 			} else {
+				blinkStatus(node, true, 'Sending command ...');
 				node.slide.localApi.updateWifi(ssid, pass).then(result => {
 					blinkStatus(node, true, 'Command OK');
-					send({ 'topic': ((node.topic !== '') ? node.topic : 'slide'), 'payload': result });
+					send({ 'topic': getTopic(node, msg), 'succeeded': true, 'payload': result });
 					done();
 				}).catch(e => {
-					blinkStatus(node, false, e.title);
-					node.warn(e.message);
-					send(null);
+					blinkStatus(node, false, 'Command failed!');
+					send({ 'topic': getTopic(node, msg), 'succeeded': false, 'payload': e });
 					done();
 				});
 			}
@@ -366,7 +320,7 @@ module.exports = function(RED) {
 
 	// HTTP callbacks for config node
 	RED.httpAdmin.post('/slide/info', function(req, res) {
-		var localApi = new LocalApi(req.body.hostname, req.body.devicecode);
+		let localApi = new LocalApi(req.body.hostname, req.body.devicecode);
 		localApi.getInfo().then(result => {
 			res.status(200).send(result);
 		}).catch(e => {
@@ -375,7 +329,7 @@ module.exports = function(RED) {
 	});
 
 	RED.httpAdmin.post('/slide/calibrate', function(req, res) {
-		var localApi = new LocalApi(req.body.hostname, req.body.devicecode);
+		let localApi = new LocalApi(req.body.hostname, req.body.devicecode);
 		localApi.calibrate().then(result => {
 			res.status(200).send(result);
 		}).catch(e => {
@@ -384,7 +338,7 @@ module.exports = function(RED) {
 	});
 
 	RED.httpAdmin.post('/slide/open', function(req, res) {
-		var localApi = new LocalApi(req.body.hostname, req.body.devicecode, req.body.openPosition, req.body.closePosition);
+		let localApi = new LocalApi(req.body.hostname, req.body.devicecode, req.body.openPosition, req.body.closePosition);
 		localApi.open().then(result => {
 			res.status(200).send(result);
 		}).catch(e => {
@@ -393,7 +347,7 @@ module.exports = function(RED) {
 	});
 
 	RED.httpAdmin.post('/slide/close', function(req, res) {
-		var localApi = new LocalApi(req.body.hostname, req.body.devicecode, req.body.openPosition, req.body.closePosition);
+		let localApi = new LocalApi(req.body.hostname, req.body.devicecode, req.body.openPosition, req.body.closePosition);
 		localApi.close().then(result => {
 			res.status(200).send(result);
 		}).catch(e => {
@@ -402,7 +356,7 @@ module.exports = function(RED) {
 	});
 
 	RED.httpAdmin.post('/slide/stop', function(req, res) {
-		var localApi = new LocalApi(req.body.hostname, req.body.devicecode);
+		let localApi = new LocalApi(req.body.hostname, req.body.devicecode);
 		localApi.stop().then(() => {
 			res.status(200).send();
 		}).catch(e => {
