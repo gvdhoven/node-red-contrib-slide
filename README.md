@@ -42,13 +42,7 @@ As you can see, it contains a 'calibrate' button. Once you have entered the host
  - Saves the 'open' offset (this should be near the 0.0 range)
  - Restores the curtain to the approximate position it was while calibration was initiated.
 
-This offset is then used on subsequent calls on the `slide-set-calibrated-position` node, to more precisely determine the curtain position and to see if an actual call to the motor is even needed.
-
-For example;
- 
- - If the open offset is actually `0.09` and the closed offset `0.87` (just as an example) setting the curtain to `50%` would mean that the curtain should move to position: `0.09 + (0.5 * (0.87 - 0.09)) = 0.48` (which is exactly halfway between `0.09` and `0.87`).
- - If the open offset is actually `0.09` and the curtain is already at `0.09`; no `setPosition` command will be issued if you want to open the curtain; meaning you shouldn't hear the motor wirring.
- - If the close offset is actually `0.87` and the curtain is already at `0.87`; no `setPosition` command will be issued if you want to close the curtain; meaning you shouldn't hear the motor wirring.
+This offset is then used on subsequent calls on the `slide-set-position` node, to more precisely determine the curtain position and to see if an actual call to the motor is even needed. You can also set the 'open' and 'close' offset yourself if you have for example a curtain that you want to limit the open position at 10% (in case you have a blind wall or something).
 
 A full run of the calibration procedure can be seen on my Twitter timeline:
 
@@ -60,41 +54,28 @@ Use this node in order to get information about the state of a certain Slide. Th
 
 ![slide-get-info](https://github.com/gvdhoven/node-red-contrib-slide/blob/main/assets/readme/img/slide-get-info.png?raw=true)
 
-### slide-set-absolute-position
+### slide-set-position
 
-This node is able to set an absolute position on the slide, from 0 to 100%. This will most probably not mean that your curtain is half-way closed if you pass in the following payload `{ "payload": { "percent": 50 } }`, due to the fact that the Slide at `open` position can actually be at e.g. 4% and that same curtain can report a closed state of 98%. Halfway in this case would then be 51%. This math is done for you if you take the next Node; `slide-set-calibrated-position`.
+This node is able to set a position on the slide, from 0 to 100%. Use this in combination with an inject node.
 	
 ![Inject node sample](https://github.com/gvdhoven/node-red-contrib-slide/blob/main/assets/readme/img/inject-node.png?raw=true)
 
-A sample response is shown here:
-
-```
-	{
-	   "response":"success",
-	   "requestedPosition":1,
-	   "currentPosition":0.98,
-	   "openPosition":0,
-	   "closedPosition":1,
-	   "suggestToCalibrate":true
-	}
-```
-
-### slide-set-calibrated-position
-
-This node takes the calibration settings found by clicking the 'Calibrate' button in the config node and applies that to a percentage offset. In the example shown at the `slide-set-absolute-position` node, the same payload `{ "payload": { "percent": 50 } }` would result in the Slide moving to 51%.
+Note: this will most probably not mean that your curtain is half-way closed if you pass in the following payload `{ "payload": { "percent": 50 } }`, due to the fact that the Slide at `open` position can actually be at e.g. 4% and that same curtain can report a closed state of 98%. Halfway in this case would then be 51%. Since this calculation is different per length of the rod, it is up to you to define your own values.
 
 A sample response is shown here:
 
 ```
 	{
-	   "response":"success",
-	   "requestedPosition":1,
-	   "currentPosition":0.98,
-	   "openPosition":0,
-	   "closedPosition":1,
-	   "suggestToCalibrate":true
+	   "response": "success",
+	   "requestedPosition": 1,
+	   "currentPosition": 0.98,
+	   "openPosition": 0,
+	   "closedPosition": 1,
+	   "openPercentage": 98,
+	   "suggestToCalibrate": false
 	}
 ```
+
 
 ### slide-open
 
